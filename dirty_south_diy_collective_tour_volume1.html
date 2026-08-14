@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Dirty South DIY Collective Tour</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --paper:#f1ead8; --ink:#181818; --accent:#d84b2f; --muted:#6f6a5d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--paper); color:var(--ink); }
+  header { padding:22px 18px 16px; border-bottom:4px solid var(--ink); }
+  h1 { margin:0; font-size:clamp(28px,6vw,54px); line-height:.95; text-transform:uppercase; letter-spacing:-1px; }
+  .subtitle { margin-top:10px; max-width:850px; font-size:16px; line-height:1.45; }
+  .badge { display:inline-block; margin-top:12px; padding:6px 9px; border:2px solid var(--ink); font-weight:800; text-transform:uppercase; font-size:12px; transform:rotate(-1deg); }
+  #map { height:68vh; min-height:520px; border-bottom:4px solid var(--ink); }
+  .legend { position:absolute; z-index:999; top:14px; left:14px; background:rgba(241,234,216,.95); border:2px solid var(--ink); padding:10px 12px; max-width:270px; box-shadow:4px 4px 0 rgba(0,0,0,.18); }
+  .legend strong { text-transform:uppercase; }
+  .route-note { font-size:12px; margin-top:4px; color:var(--muted); }
+  .stop { width:34px; height:34px; border-radius:50%; background:var(--accent); border:3px solid var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:15px; box-shadow:2px 2px 0 rgba(0,0,0,.35); }
+  .mileage { background:var(--paper); border:2px solid var(--ink); padding:3px 6px; font-weight:900; font-size:12px; white-space:nowrap; box-shadow:2px 2px 0 rgba(0,0,0,.18); }
+  .leaflet-popup-content-wrapper { border:3px solid var(--ink); border-radius:0; background:var(--paper); }
+  .leaflet-popup-tip { background:var(--paper); }
+  .popup h3 { margin:0 0 3px; text-transform:uppercase; font-size:19px; }
+  .popup p { margin:6px 0; line-height:1.35; }
+  .popup .tag { display:inline-block; font-size:11px; font-weight:900; text-transform:uppercase; border:1px solid var(--ink); padding:3px 5px; margin:3px 3px 0 0; }
+  .popup a { display:inline-block; margin-top:9px; padding:8px 10px; background:var(--ink); color:white; text-decoration:none; font-weight:800; }
+  .route { padding:22px 18px 35px; max-width:1000px; margin:auto; }
+  .route h2 { text-transform:uppercase; font-size:25px; margin:0 0 15px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+  .card { border:2px solid var(--ink); padding:13px; background:rgba(255,255,255,.25); }
+  .num { font-size:12px; font-weight:900; text-transform:uppercase; }
+  .card h3 { margin:3px 0 2px; font-size:20px; }
+  .city { color:var(--muted); font-size:14px; }
+  .mission { margin:20px 0 0; border:3px solid var(--ink); padding:16px; background:#fff8e8; }
+  .mission h3 { margin:0 0 8px; text-transform:uppercase; }
+  footer { padding:15px 18px 28px; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>The Dirty South DIY Collective Tour</h1>
+  <div class="subtitle">
+    <strong>Volume 1 — Thunder Place</strong><br>
+    Cherokee, North Carolina<br><br>
+    Camping for the weekend with the Bassland DIY crew at Thunder Place's 10th annual skate competition.
+  </div>
+  <div class="badge">9 stops • approximately 491 road miles</div>
+</header>
+
+<div id="map"></div>
+
+<section class="route">
+  <h2>Route — 9 stops</h2>
+  <div class="cards" id="cards"></div>
+  <div class="mission">
+    <h3>What we're looking for</h3>
+    <div>
+      Local builders. The stories behind the spots. Who started it. Who keeps it alive.
+      What materials were used. What has been lost. What is being built next.
+      We want to hear from the people who actually make these places happen.
+    </div>
+  </div>
+</section>
+
+<footer>
+  Mileage shown between stops is an approximate driving estimate based on the listed
+  cities/route, not turn-by-turn navigation. Tap a marker for directions.
+  Park locations and access can change, so check with locals before arriving.
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const stops = [
+  {n:1, name:"Thunder Place", city:"Cherokee, NC", lat:35.4743, lng:-83.3238, milesToNext:26,
+   note:"Cherokee Action Sports Park — Ayvdagwalosgiyi, “Thunder Place.”"},
+  {n:2, name:"CreteShed DIY", city:"Waynesville, NC", lat:35.4887, lng:-82.9887, milesToNext:31,
+   note:"Waynesville DIY stop."},
+  {n:3, name:"Foundation DIY", city:"Asheville, NC", lat:35.5951, lng:-82.5515, milesToNext:77,
+   note:"Asheville DIY stop."},
+  {n:4, name:"Shit Hole DIY", city:"Hickory, NC", lat:35.7345, lng:-81.3445, milesToNext:29,
+   note:"Hickory DIY stop."},
+  {n:5, name:"Skatesville DIY", city:"Statesville, NC", lat:35.7826, lng:-80.8873, milesToNext:42,
+   note:"Community-built Statesville DIY."},
+  {n:6, name:"Kilborne DIY", city:"Charlotte, NC", lat:35.2370, lng:-80.7680, milesToNext:93,
+   note:"Charlotte DIY at Kilborne Park."},
+  {n:7, name:"LowBlock DIY", city:"Columbia, SC", lat:34.1115, lng:-80.8780, milesToNext:103,
+   note:"Community-built DIY in Columbia."},
+  {n:8, name:"Poe Mill DIY", city:"Greenville, SC", lat:34.8700, lng:-82.4100, milesToNext:90,
+   note:"Historic Greenville DIY in the Poe Mill area."},
+  {n:9, name:"BassLand DIY", city:"Bogart, GA", lat:33.9543, lng:-83.5349, milesToNext:null,
+   note:"Backyard DIY in Bogart, near Athens."}
+];
+
+const map = L.map('map', {scrollWheelZoom:true});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'© OpenStreetMap contributors'
+}).addTo(map);
+
+const points = stops.map(s => [s.lat,s.lng]);
+map.fitBounds(points, {padding:[35,35]});
+
+stops.forEach((s, i) => {
+  const icon = L.divIcon({className:'', html:`<div class="stop">${s.n}</div>`, iconSize:[34,34], iconAnchor:[17,17]});
+  const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.name + ', ' + s.city)}`;
+  const popup = `
+    <div class="popup">
+      <h3>${s.n}. ${s.name}</h3>
+      <div><strong>${s.city}</strong></div>
+      <p>${s.note}</p>
+      <span class="tag">Interview</span>
+      <span class="tag">Film</span>
+      <span class="tag">Zine</span>
+      <br><a href="${directions}" target="_blank" rel="noopener">Get directions ↗</a>
+    </div>`;
+  L.marker([s.lat,s.lng], {icon}).addTo(map).bindPopup(popup);
+
+  if (i < stops.length - 1) {
+    const next = stops[i+1];
+    const midLat = (s.lat + next.lat)/2;
+    const midLng = (s.lng + next.lng)/2;
+    const mileageIcon = L.divIcon({
+      className:'',
+      html:`<div class="mileage">${s.milesToNext} mi</div>`,
+      iconSize:null,
+      iconAnchor:[0,0]
+    });
+    L.marker([midLat,midLng], {icon:mileageIcon, interactive:false}).addTo(map);
+  }
+});
+
+L.polyline(points, {weight:5, opacity:.78, dashArray:'10 8'}).addTo(map);
+
+const cards = document.getElementById('cards');
+cards.innerHTML = stops.map((s,i) => `
+  <div class="card">
+    <div class="num">Stop ${s.n}${i < stops.length-1 ? ` • ${s.milesToNext} miles to next stop` : ' • FINAL STOP'}</div>
+    <h3>${s.name}</h3>
+    <div class="city">${s.city}</div>
+    <div style="margin-top:8px;font-size:13px;">${s.note}</div>
+  </div>
+`).join('');
+</script>
+</body>
+</html>
